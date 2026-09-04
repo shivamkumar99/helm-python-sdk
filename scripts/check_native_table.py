@@ -48,7 +48,6 @@ _C_TYPES: list[tuple[str, str]] = [
     ("void", "void"),
 ]
 
-# ctypes object -> canonical type name.
 # ctypes expression (as unparsed source, aliases resolved) -> canonical name.
 _PY_TYPES: dict[str, str] = {
     "ctypes.POINTER(ctypes.c_uint8)": "bytes_in",
@@ -109,12 +108,9 @@ def _canon_py(expr: ast.expr, aliases: dict[str, str]) -> str:
     return canon
 
 
-def table_from_source() -> dict[str, tuple[str, list[str]]]:
-    """Read SIGNATURES by parsing the module source — nothing is executed."""
-    module = ast.parse(_native_source, filename="_native.py")
-
+def _module_aliases(module: ast.Module) -> dict[str, str]:
+    """Simple ``NAME = expression`` assignments at module level."""
     aliases: dict[str, str] = {}
-    signatures: ast.Dict | None = None
     for node in module.body:
         if (
             isinstance(node, ast.Assign)
@@ -122,31 +118,48 @@ def table_from_source() -> dict[str, tuple[str, list[str]]]:
             and isinstance(node.targets[0], ast.Name)
         ):
             aliases[node.targets[0].id] = ast.unparse(node.value)
-        elif (
+    return aliases
+
+
+def _signatures_dict(module: ast.Module) -> ast.Dict:
+    """The AST node of the annotated ``SIGNATURES = {...}`` assignment."""
+    for node in module.body:
+        if (
             isinstance(node, ast.AnnAssign)
             and isinstance(node.target, ast.Name)
             and node.target.id == "SIGNATURES"
             and isinstance(node.value, ast.Dict)
         ):
-            signatures = node.value
-    if signatures is None:
-        raise SystemExit("check_native_table: SIGNATURES dict not found in _native.py")
+            return node.value
+    raise SystemExit("check_native_table: SIGNATURES dict not found in _native.py")
 
-    result: dict[str, tuple[str, list[str]]] = {}
-    for key, value in zip(signatures.keys, signatures.values, strict=True):
-        if not (isinstance(key, ast.Constant) and isinstance(key.value, str)):
-            raise SystemExit("check_native_table: non-literal SIGNATURES key")
-        if not (
-            isinstance(value, ast.Tuple)
-            and len(value.elts) == 2
-            and isinstance(value.elts[1], ast.List)
-        ):
-            raise SystemExit(f"check_native_table: unexpected entry shape for {key.value}")
-        restype, argtypes = value.elts
-        ret = _canon_py(restype, aliases)
-        args = [_canon_py(a, aliases) for a in argtypes.elts]
-        result[key.value] = (ret, args)
-    return result
+
+def _table_entry(
+    key: ast.expr | None, value: ast.expr, aliases: dict[str, str]
+) -> tuple[str, tuple[str, list[str]]]:
+    """Canonicalize one ``"name": (restype, [argtypes])`` entry."""
+    if not (isinstance(key, ast.Constant) and isinstance(key.value, str)):
+        raise SystemExit("check_native_table: non-literal SIGNATURES key")
+    if not (
+        isinstance(value, ast.Tuple)
+        and len(value.elts) == 2
+        and isinstance(value.elts[1], ast.List)
+    ):
+        raise SystemExit(f"check_native_table: unexpected entry shape for {key.value}")
+    restype, argtypes = value.elts[0], value.elts[1]
+    args = [_canon_py(a, aliases) for a in argtypes.elts]
+    return key.value, (_canon_py(restype, aliases), args)
+
+
+def table_from_source() -> dict[str, tuple[str, list[str]]]:
+    """Read SIGNATURES by parsing the module source — nothing is executed."""
+    module = ast.parse(_native_source, filename="_native.py")
+    aliases = _module_aliases(module)
+    signatures = _signatures_dict(module)
+    return dict(
+        _table_entry(key, value, aliases)
+        for key, value in zip(signatures.keys, signatures.values, strict=True)
+    )
 
 
 def main() -> int:

@@ -92,3 +92,11 @@ files = ["src/helm_python"]
 # never shipped, and never runs under `python -O` (B101). The generator-run
 # subprocess in the verify fixture uses a resolved binary and a fixed argv.
 exclude_dirs = ["tests", ".venv", ".ci-venv"]
+
+[tool.pylint.design]
+# Config.__init__/install/upgrade and pull mirror the Helm CLI option surface
+# as optional keyword-only parameters; the ABI carries them as a single
+# opts_json document. Collapsing them into an options object would add
+# indirection without any safety gain, so the project caps the limit at the
+# widest such surface instead.
+max-args = 20

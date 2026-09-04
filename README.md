@@ -38,13 +38,17 @@ Three options, resolved in this order:
 
 1. **Point at your own build** — build [helm-c-sdk](https://github.com/shivamkumar99/helm-c-sdk)
    (`make build`, works anywhere Go runs) and set:
+
    ```bash
    export HELM_C_LIB=/path/to/libhelm_c.so     # or .dylib / .dll, or its directory
    ```
+
 2. **Build during install** — requires Go and a C compiler:
+
    ```bash
    HELM_PYTHON_BUILD=1 pip install --no-binary helm-python-sdk helm-python-sdk
    ```
+
    The source distribution vendors the pinned helm-c-sdk source, so nothing unpinned is
    fetched. The installer checks for Go, a C compiler, and `make` first and names exactly
    what is missing rather than failing with a compiler error.

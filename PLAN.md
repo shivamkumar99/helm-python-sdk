@@ -15,7 +15,7 @@ helm binary on the user's machine.
 ## 2. Mechanism decision — why ctypes (alternatives considered)
 
 | Option | Verdict |
-|---|---|
+| --- | --- |
 | **ctypes** | **CHOSEN** — stdlib only, no install-time compile, our ABI maps 1:1 (status ints, out-params, JSON strings, uint64 handles; no struct returns). CFUNCTYPE covers the log callback; GIL is acquired automatically for calls from Go threads. |
 | cffi (ABI mode) | Strong runner-up: `ffi.cdef` can consume helm_c.h nearly verbatim (less signature-typo risk). Adds a runtime dep. Fallback if the ctypes declaration table proves error-prone. |
 | Cython / pybind11 / raw CPython extension | Compile step per platform × Python version (big wheels matrix) for zero benefit here — the work is I/O-bound Helm operations, not marshalling. Rejected. |
@@ -28,7 +28,7 @@ ctypes bindings over a C ABI have well-known failure modes; each one is
 addressed by design rather than by discipline:
 
 | Classic pitfall | helm-python's answer |
-|---|---|
+| --- | --- |
 | `argtypes`/`restype` declared ad hoc near call sites, drifting over time | One declaration table in `_native.py`, executed once at import |
 | Hand-maintained signatures with no drift check | Table checked (or generated) against `helm_c.h` in CI — signature drift fails the build |
 | Struct-by-value returns, awkward and fragile in ctypes | Our ABI has no struct returns at all (status + out-params, designed for FFI) |
@@ -45,7 +45,7 @@ maintenance burden, move to cffi; the public Python API would not change.
 
 ## 3. Package layout (target)
 
-```
+```text
 helm-python-sdk/   (repo; distribution helm-python-sdk, import helm_python)
   PLAN.md
   pyproject.toml            # hatchling/setuptools; py.typed; platform wheels
@@ -70,7 +70,7 @@ helm-python-sdk/   (repo; distribution helm-python-sdk, import helm_python)
 All three coexist; highest-priority match wins at import time:
 
 | Priority | Option | Trigger | How it works |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 1 | **User-supplied library** | `HELM_C_LIB=/path/to/libhelm_c.<ext>` is set | Loader uses that exact file. For users who built helm-c-sdk themselves (`make build` — works on any Go platform), air-gapped hosts, and downgrades/tests. |
 | 2 | **Build on the user's system** | `HELM_PYTHON_BUILD=1` at `pip install` time (and automatically when no prebuilt matches the platform) | The sdist build hook first runs a **requirements preflight** — Go ≥ pinned toolchain, a C compiler, `make` — and fails fast with an actionable per-item message if anything is missing. Then it builds from the **vendored helm-c-sdk source snapshot at the pinned tag** (self-contained, checksummed; no unpinned network fetch) and verifies `helm_sdk_version()` before accepting. |
 | 3 | **Normal install — prebuilt from GitHub** | default `pip install` | The platform wheel already **bundles** the binary taken from the helm-c-sdk GitHub release (downloaded at wheel-build time in CI, verified against `sha256sums.txt` — the ClamAV-scanned artifacts). User machines get the GitHub-released binary without needing GitHub access or network beyond PyPI. |
@@ -110,7 +110,7 @@ At import, whichever library is loaded is validated (`helm_c_version` +
 `helm_sdk_version` against the pin) so a stale or mismatched library is a
 clear, actionable error instead of undefined behavior.
 
-## 3.3 Is a Python-side build needed? No.
+## 3.3 Is a Python-side build needed? No
 
 helm-python is **pure Python** (ctypes is stdlib). There is nothing to
 compile in the Python layer itself — no C extension, no Cython. "Building the
@@ -131,6 +131,7 @@ with helm.Config(namespace="default") as cfg:  # ~/.kube/config chain
     print(rel["revision"], rel["status"])
     cfg.uninstall("demo")
 ```
+
 - Cancellation: `helm.HelmContext()` handle passed to install/upgrade; `.cancel()`
   from any thread → `HelmCancelledError`.
 - Logging: `helm.enable_logging(level=…)` bridges the C callback into the
@@ -139,6 +140,7 @@ with helm.Config(namespace="default") as cfg:  # ~/.kube/config chain
 ## 5. Phases
 
 ### Phase 0 — skeleton & native table — **DONE 2026-08-15**
+
 - [x] `pyproject.toml` (hatchling, py.typed, zero runtime deps, ruff/mypy/pytest config)
 - [x] `_native.py`: absolute-path loader (HELM_C_LIB → packaged lib/), the full
       43-symbol declaration table applied once at import, `take_string`
@@ -156,7 +158,9 @@ with helm.Config(namespace="default") as cfg:  # ~/.kube/config chain
 - Note: `_memory.py` from the sketch was folded into `_native.py` — string
   ownership needs `helm_free_string`, and a separate module would have meant
   a circular import or needless indirection.
+
 ### Phase 1 — offline chart surface — **DONE 2026-08-15**
+
 - [x] `_handle.py`: `NativeHandle` base — context manager, idempotent
       `close()`, `weakref.finalize` safety net (safe because ABI frees are
       idempotent), closed-object guard
@@ -166,7 +170,9 @@ with helm.Config(namespace="default") as cfg:  # ~/.kube/config chain
 - [x] 68 tests: lifecycle (context manager, double close, use-after-close,
       GC-frees-handle), rendering with options, schema pass/fail, packaging,
       and provenance verification against generated signing material
+
 ### Phase 2 — distribution — **DONE 2026-08-15**
+
 - [x] `RegistryClient` (constructor takes debug/plain_http/credentials_file;
       login/logout/push/pull; context manager like every handle type)
 - [x] Module `pull` (HTTP repo via repo_url, or oci:// with an optional
@@ -176,7 +182,9 @@ with helm.Config(namespace="default") as cfg:  # ~/.kube/config chain
       resolve + rebuild-from-lock) — no network needed; OCI paths covered
       via error/marshalling paths, with the full round trip living in
       helm-c-sdk's Go suite against an in-process registry
+
 ### Phase 3 — cluster actions — **DONE 2026-08-15**
+
 - [x] `Config`: the full kube surface (kubeconfig path or inline content,
       context, bearer token, apiserver/CA/TLS-server-name/insecure,
       impersonation user+groups, burst/qps, namespace, storage driver);
@@ -194,7 +202,9 @@ with helm.Config(namespace="default") as cfg:  # ~/.kube/config chain
   methods from the object they belong to. Module-level `Release`/
   `ReleaseList` aliases exist because `Config.list` shadows the builtin
   ``list`` inside the class body.
+
 ### Phase 4 — logging + packaging — **DONE 2026-08-15**
+
 - [x] `logging.py`: `enable_logging(level, logger)` / `disable_logging()`
       bridging the C callback into Python logging on the
       ``helm_python.native`` logger. The callback object is kept referenced
@@ -218,6 +228,7 @@ with helm.Config(namespace="default") as cfg:  # ~/.kube/config chain
       environment variables and zero leaked handles.
 
 ### Remaining before a public release
+
 - [x] PyPI distribution name: **`helm-python-sdk`**. Checked 2026-08-15 —
       `helm-python` is already taken on PyPI; `helm-python-sdk` is free and
       matches both this repository and its helm-c-sdk sibling. The import
