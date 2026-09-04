@@ -27,7 +27,7 @@ def signing_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
         pytest.skip("Go toolchain not available to generate signing fixtures")
 
     out = tmp_path_factory.mktemp("signing")
-    result = subprocess.run(  # fixed argv, resolved binary, no shell
+    result = subprocess.run(  # nosemgrep: fixed argv, absolute go path, no shell
         [go_binary, "run", "./test/genfixtures", "-dir", str(out)],
         cwd=HELM_C,
         capture_output=True,

@@ -69,7 +69,7 @@ def main() -> int:
 
     tag = args.platform_tag or platform_tag()
     # argv is fixed and runs this same interpreter.
-    result = subprocess.run(  # nosec B603
+    result = subprocess.run(  # nosec B603 # nosemgrep: fixed argv, sys.executable, no shell
         [
             sys.executable,
             "-m",

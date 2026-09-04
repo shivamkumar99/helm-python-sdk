@@ -62,7 +62,7 @@ def _preflight(source: Path) -> list[str]:
         problems.append(f"Go is not installed (need {needed}+): https://go.dev/dl/")
     else:
         # argv is fixed; `go` was resolved by shutil.which above.
-        result = subprocess.run(  # nosec B603
+        result = subprocess.run(  # nosec B603 # nosemgrep: fixed argv, absolute go path, no shell
             [go, "version"], capture_output=True, text=True, check=False
         )
         if result.returncode != 0:
@@ -115,9 +115,13 @@ def build_native_library() -> None:
             "set HELM_C_LIB to a library you built elsewhere."
         )
 
-    # Fixed argv; `make` presence is verified by _preflight above.
-    result = subprocess.run(  # nosec B603, B607
-        ["make", "build"],
+    # _preflight above guarantees `make` exists; resolve it to an absolute
+    # path anyway so nothing is looked up through PATH at execution time.
+    make = shutil.which("make")
+    if make is None:  # pragma: no cover - _preflight already rejected this
+        raise RuntimeError("`make` disappeared between preflight and build")
+    result = subprocess.run(  # nosec B603 # nosemgrep: fixed argv, absolute make path, no shell
+        [make, "build"],
         cwd=source,
         capture_output=True,
         text=True,
