@@ -354,27 +354,29 @@ class Config(NativeHandle):
     def list(
         self,
         *,
-        all: bool = False,
+        all_states: bool = False,
         all_namespaces: bool = False,
         limit: int | None = None,
         offset: int | None = None,
-        filter: str | None = None,
+        name_filter: str | None = None,
     ) -> ReleaseList:
         """List releases as summaries (without manifests).
 
         Args:
-            all: include every state, not just deployed releases.
-            filter: a regular expression matched against release names.
+            all_states: include every state, not just deployed releases
+                (the CLI's ``--all``).
+            name_filter: a regular expression matched against release names
+                (the CLI's ``--filter``).
         """
         payload = _native.call_string(
             "helm_list",
             self._raw(),
             _opts(
-                all=all or None,
+                all=all_states or None,
                 all_namespaces=all_namespaces or None,
                 limit=limit,
                 offset=offset,
-                filter=filter,
+                filter=name_filter,
             ),
         )
         return _loads_list(payload)
@@ -384,23 +386,29 @@ class Config(NativeHandle):
         payload = _native.call_string("helm_status", self._raw(), name, _opts(revision=revision))
         return _loads_obj(payload)
 
-    def history(self, name: str, *, max: int | None = None) -> ReleaseList:
-        """Return the release's revisions, oldest first."""
-        payload = _native.call_string("helm_history", self._raw(), name, _opts(max=max))
+    def history(self, name: str, *, max_revisions: int | None = None) -> ReleaseList:
+        """Return the release's revisions, oldest first.
+
+        Args:
+            max_revisions: cap on returned revisions (the CLI's ``--max``).
+        """
+        payload = _native.call_string("helm_history", self._raw(), name, _opts(max=max_revisions))
         return _loads_list(payload)
 
-    def get_values(self, name: str, *, all: bool = False, revision: int | None = None) -> Release:
+    def get_values(
+        self, name: str, *, all_values: bool = False, revision: int | None = None
+    ) -> Release:
         """Return a release's values.
 
         Args:
-            all: return the computed values rather than only the
-                user-supplied ones.
+            all_values: return the computed values rather than only the
+                user-supplied ones (the CLI's ``--all``).
         """
         payload = _native.call_string(
             "helm_get_values",
             self._raw(),
             name,
-            _opts(all=all or None, revision=revision),
+            _opts(all=all_values or None, revision=revision),
         )
         return _loads_obj(payload)
 

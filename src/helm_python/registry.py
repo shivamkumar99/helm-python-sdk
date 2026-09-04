@@ -250,7 +250,7 @@ def show(
     chart_ref: str,
     *,
     client: RegistryClient | None = None,
-    format: str = "all",
+    output_format: str = "all",
     devel: bool = False,
     version: str | None = None,
     repo_url: str | None = None,
@@ -265,8 +265,8 @@ def show(
         chart_ref: a local path, a repo chart name (with ``repo_url``), or an
             ``oci://`` reference.
         client: optional logged-in client for private registries.
-        format: ``"all"`` (default), ``"chart"``, ``"values"``, ``"readme"``,
-            or ``"crds"``.
+        output_format: ``"all"`` (default), ``"chart"``, ``"values"``,
+            ``"readme"``, or ``"crds"``.
 
     Returns:
         The SDK's text rendering (YAML/Markdown).
@@ -276,7 +276,7 @@ def show(
         _client_handle(client),
         chart_ref,
         _opts(
-            format=format if format != "all" else None,
+            format=output_format if output_format != "all" else None,
             devel=devel or None,
             version=version,
             chart_repo_url=repo_url,

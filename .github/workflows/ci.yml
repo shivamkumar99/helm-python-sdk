@@ -177,7 +177,7 @@ jobs:
           python -m pip install bandit
           # Fail on any finding: the tree is clean, and justified cases carry
           # an inline nosec with a reason.
-          bandit -r src scripts hatch_build.py -f txt -o reports/bandit.txt
+          bandit -c pyproject.toml -r . -f txt -o reports/bandit.txt
       - name: Dependency CVEs (declared dependencies only)
         run: |
           python -m pip install pip-audit

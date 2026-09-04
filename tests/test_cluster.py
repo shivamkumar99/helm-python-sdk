@@ -97,7 +97,7 @@ def test_install_with_loaded_chart(cluster_config: helm.Config, chart_dir: Path)
 def test_dry_run_does_not_persist(cluster_config: helm.Config, chart_dir: Path) -> None:
     release = cluster_config.install(chart_dir, RELEASE, dry_run="client")
     assert release["status"] == "pending-install"
-    assert not any(item["name"] == RELEASE for item in cluster_config.list(all=True))
+    assert not any(item["name"] == RELEASE for item in cluster_config.list(all_states=True))
 
 
 def test_status_of_missing_release(cluster_config: helm.Config) -> None:

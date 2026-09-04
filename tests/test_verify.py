@@ -22,12 +22,13 @@ def signing_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """Generate a signed chart, its provenance file, and a public keyring."""
     if not (HELM_C / "test" / "genfixtures").is_dir():
         pytest.skip("helm-c-sdk checkout not available")
-    if shutil.which("go") is None:
+    go_binary = shutil.which("go")
+    if go_binary is None:
         pytest.skip("Go toolchain not available to generate signing fixtures")
 
     out = tmp_path_factory.mktemp("signing")
-    result = subprocess.run(
-        ["go", "run", "./test/genfixtures", "-dir", str(out)],
+    result = subprocess.run(  # fixed argv, resolved binary, no shell
+        [go_binary, "run", "./test/genfixtures", "-dir", str(out)],
         cwd=HELM_C,
         capture_output=True,
         text=True,

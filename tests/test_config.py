@@ -80,7 +80,7 @@ def test_config_accepts_the_full_kube_surface(kubeconfig: Path) -> None:
     with helm.Config(
         kubeconfig_path=kubeconfig,
         kube_context="nowhere",
-        kube_token="token",
+        kube_token="stub-bearer-value-for-signature-test",
         kube_apiserver="https://127.0.0.1:1",
         kube_tls_server_name="api.internal",
         kube_insecure_skip_tls_verify=True,

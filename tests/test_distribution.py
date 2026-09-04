@@ -23,7 +23,7 @@ def chart(chart_dir: Path):
 
 
 def test_show_local_chart_values(chart_dir: Path) -> None:
-    text = helm.show(str(chart_dir), format="values")
+    text = helm.show(str(chart_dir), output_format="values")
     assert "replicaCount" in text
 
 
@@ -34,7 +34,7 @@ def test_show_all_includes_the_definition(chart_dir: Path) -> None:
 
 def test_show_unknown_format_raises(chart_dir: Path) -> None:
     with pytest.raises(helm.HelmError):
-        helm.show(str(chart_dir), format="bogus")
+        helm.show(str(chart_dir), output_format="bogus")
 
 
 def test_repo_index_generate(chart: helm.Chart, tmp_path: Path) -> None:

@@ -10,14 +10,13 @@ Usage:
 
 from __future__ import annotations
 
-import ctypes
+import ast
 import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-# Import the table without loading the native library.
+# Read the table without importing anything: the module source is parsed as
+# an AST, so neither the native library nor any Python code is loaded.
 _native_source = (
     Path(__file__).resolve().parents[1] / "src" / "helm_python" / "_native.py"
 ).read_text()
@@ -50,16 +49,17 @@ _C_TYPES: list[tuple[str, str]] = [
 ]
 
 # ctypes object -> canonical type name.
-_PY_TYPES: dict[object, str] = {
-    ctypes.POINTER(ctypes.c_uint8): "bytes_in",
-    ctypes.c_char_p: "str_in",
-    ctypes.POINTER(ctypes.c_void_p): "str_out",
-    ctypes.c_void_p: "void_p",
-    ctypes.POINTER(ctypes.c_uint64): "handle_out",
-    ctypes.c_uint64: "handle",
-    ctypes.c_int32: "i32",
-    ctypes.c_int64: "i64",
-    None: "void",
+# ctypes expression (as unparsed source, aliases resolved) -> canonical name.
+_PY_TYPES: dict[str, str] = {
+    "ctypes.POINTER(ctypes.c_uint8)": "bytes_in",
+    "ctypes.c_char_p": "str_in",
+    "ctypes.POINTER(ctypes.c_void_p)": "str_out",
+    "ctypes.c_void_p": "void_p",
+    "ctypes.POINTER(ctypes.c_uint64)": "handle_out",
+    "ctypes.c_uint64": "handle",
+    "ctypes.c_int32": "i32",
+    "ctypes.c_int64": "i64",
+    "None": "void",
 }
 
 _DECL = re.compile(
@@ -94,30 +94,58 @@ def parse_header(path: Path) -> dict[str, tuple[str, list[str]]]:
     return out
 
 
+def _canon_py(expr: ast.expr, aliases: dict[str, str]) -> str:
+    """Canonicalize a declaration-table type expression via the alias map."""
+    text = ast.unparse(expr)
+    seen: set[str] = set()
+    while text in aliases and text not in seen:
+        if text == "LOG_CALLBACK":
+            return "log_cb"
+        seen.add(text)
+        text = aliases[text]
+    canon = _PY_TYPES.get(text)
+    if canon is None:  # pragma: no cover - developer error
+        raise SystemExit(f"check_native_table: unmapped ctypes expression {text!r}")
+    return canon
+
+
 def table_from_source() -> dict[str, tuple[str, list[str]]]:
-    """Read SIGNATURES by importing the module with loading disabled."""
-    namespace: dict[str, object] = {}
-    # Execute only the part of _native.py up to the loader, which is enough
-    # to define the type aliases and SIGNATURES.
-    cut = _native_source.index("# --- locating the library")
-    header = _native_source[:cut]
-    header = header.replace("from .errors import HelmLibraryError, raise_for_code", "")
-    # Executes a fixed prefix of this repository's own _native.py purely to
-    # read its SIGNATURES table. No external or user input reaches this.
-    compiled = compile(header, "_native.py", "exec")
-    exec(compiled, namespace)  # nosec B102
-    signatures = namespace["SIGNATURES"]
-    if not isinstance(signatures, dict):
-        raise SystemExit("_native.SIGNATURES is not a dict")
+    """Read SIGNATURES by parsing the module source — nothing is executed."""
+    module = ast.parse(_native_source, filename="_native.py")
+
+    aliases: dict[str, str] = {}
+    signatures: ast.Dict | None = None
+    for node in module.body:
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+        ):
+            aliases[node.targets[0].id] = ast.unparse(node.value)
+        elif (
+            isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+            and node.target.id == "SIGNATURES"
+            and isinstance(node.value, ast.Dict)
+        ):
+            signatures = node.value
+    if signatures is None:
+        raise SystemExit("check_native_table: SIGNATURES dict not found in _native.py")
 
     result: dict[str, tuple[str, list[str]]] = {}
-    for name, (restype, argtypes) in signatures.items():
-        try:
-            ret = _PY_TYPES[restype]
-            args = ["log_cb" if a is namespace["LOG_CALLBACK"] else _PY_TYPES[a] for a in argtypes]
-        except KeyError as exc:  # pragma: no cover - developer error
-            raise SystemExit(f"check_native_table: unmapped ctypes type for {name}: {exc}") from exc
-        result[name] = (ret, args)
+    for key, value in zip(signatures.keys, signatures.values, strict=True):
+        if not (isinstance(key, ast.Constant) and isinstance(key.value, str)):
+            raise SystemExit("check_native_table: non-literal SIGNATURES key")
+        if not (
+            isinstance(value, ast.Tuple)
+            and len(value.elts) == 2
+            and isinstance(value.elts[1], ast.List)
+        ):
+            raise SystemExit(f"check_native_table: unexpected entry shape for {key.value}")
+        restype, argtypes = value.elts
+        ret = _canon_py(restype, aliases)
+        args = [_canon_py(a, aliases) for a in argtypes.elts]
+        result[key.value] = (ret, args)
     return result
 
 
