@@ -1,0 +1,146 @@
+# Build platform wheels that bundle the native library, and publish them.
+#
+# Each wheel embeds the helm-c-sdk release binary for its platform, verified
+# against the release's sha256sums.txt, so `pip install helm-python-sdk` never
+# compiles anything and needs no network beyond PyPI.
+name: Wheels
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      helm_c_release:
+        description: "helm-c-sdk release to bundle (e.g. v0.2.0)"
+        required: true
+        default: v0.2.0
+
+permissions:
+  contents: read
+
+env:
+  HELM_C_RELEASE: ${{ inputs.helm_c_release || 'v0.2.0' }}
+
+jobs:
+  wheels:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform_tag: manylinux_2_28_x86_64
+          - os: macos-latest
+            platform_tag: macosx_11_0_arm64
+          # macos-13 (darwin-amd64) is parked until helm-c-sdk releases a
+          # darwin-amd64 asset — fetch_native_lib.py would fail today.
+          # Re-enable together with widening the helm-c release matrix.
+          # - os: macos-13
+          #   platform_tag: macosx_10_15_x86_64
+          - os: windows-latest
+            platform_tag: win_amd64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Bundle the native library from the helm-c-sdk release
+        env:
+          # helm-c-sdk is public; the default token is only for API rate
+          # limits when downloading its release assets.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/fetch_native_lib.py --release "$HELM_C_RELEASE"
+        shell: bash
+
+      - name: Build the wheel
+        run: |
+          python -m pip install --upgrade build wheel packaging
+          python -m build --wheel
+
+      - name: Tag it for this platform
+        shell: bash
+        run: |
+          # The wheel carries a native binary; publishing it as
+          # py3-none-any would let pip install the wrong architecture.
+          python scripts/tag_wheel.py dist/*.whl --platform-tag "${{ matrix.platform_tag }}"
+
+      - name: Smoke-test the wheel in a clean environment
+        shell: bash
+        run: |
+          python -m venv /tmp/verify
+          VENV_PY=/tmp/verify/bin/python
+          [ -x "$VENV_PY" ] || VENV_PY=/tmp/verify/Scripts/python
+          "$VENV_PY" -m pip install --quiet dist/*.whl
+          cd /tmp && "$VENV_PY" -c "
+          import helm_python as helm
+          assert helm.helm_c_version() == helm.EXPECTED_HELM_C_VERSION
+          assert helm.helm_sdk_version() == helm.EXPECTED_HELM_SDK_VERSION
+          assert helm.parse_set_string('a=1') == {'a': 1}
+          assert helm.open_handles_count() == 0
+          print('wheel verified:', helm.library_path)
+          "
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: wheel-${{ matrix.platform_tag }}
+          path: dist/*.whl
+          if-no-files-found: error
+
+  sdist:
+    # The source distribution is the build-from-source fallback for platforms
+    # without a wheel. It vendors the helm-c-sdk source so installing it
+    # compiles locally without fetching unpinned code.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Check out helm-c-sdk at the pinned release
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          repository: shivamkumar99/helm-c-sdk
+          ref: ${{ env.HELM_C_RELEASE }}
+          path: helm-c-src
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Vendor the source
+        run: python scripts/vendor_helm_c.py --from-dir helm-c-src
+      - run: python -m pip install --upgrade build
+      - run: python -m build --sdist
+
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: helm-c-src/go.mod
+      - name: Verify the sdist really builds from source
+        # Without this, the fallback path could rot unnoticed: it is only
+        # exercised on platforms that have no wheel.
+        run: |
+          python -m venv /tmp/sdist-check
+          HELM_PYTHON_BUILD=1 /tmp/sdist-check/bin/pip install --no-binary :all: dist/*.tar.gz
+          cd /tmp && /tmp/sdist-check/bin/python -c "
+          import helm_python as helm
+          assert helm.helm_sdk_version() == helm.EXPECTED_HELM_SDK_VERSION
+          print('sdist built from source:', helm.library_path)
+          "
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  publish:
+    # Publishes to PyPI on tag pushes via trusted publishing (no API token).
+    needs: [wheels, sdist]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          pattern: "{wheel-*,sdist}"
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
