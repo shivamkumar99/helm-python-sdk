@@ -4,7 +4,7 @@
 [![Wheels](https://github.com/shivamkumar99/helm-python-sdk/actions/workflows/wheels.yml/badge.svg)](https://github.com/shivamkumar99/helm-python-sdk/actions/workflows/wheels.yml)
 [![License: Apache-2.0](https://img.shields.io/github/license/shivamkumar99/helm-python-sdk)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-3776AB?logo=python&logoColor=white)](pyproject.toml)
-[![helm-c-sdk](https://img.shields.io/badge/helm--c--sdk-v0.2.0-0F1689?logo=helm)](https://github.com/shivamkumar99/helm-c-sdk/releases/tag/v0.2.0)
+[![helm-c-sdk](https://img.shields.io/badge/helm--c--sdk-v0.2.1-0F1689?logo=helm)](https://github.com/shivamkumar99/helm-c-sdk/releases/tag/v0.2.1)
 [![Helm SDK](https://img.shields.io/badge/Helm%20SDK-v4.2.3-0F1689?logo=helm)](https://github.com/helm/helm)
 [![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows-informational)](README.md#install)
 [![Zero runtime deps](https://img.shields.io/badge/runtime%20deps-none%20(stdlib%20ctypes)-success)](pyproject.toml)
@@ -86,7 +86,7 @@ helm.validate_release_name("my-release")  # raises HelmInvalidArgError if unusab
 helm.parse_set_string("image.tag=v2,ports={80,443}")
 # {'image': {'tag': 'v2'}, 'ports': [80, 443]}
 
-print(helm.helm_c_version(), helm.helm_sdk_version())  # 0.2.0 v4.2.3
+print(helm.helm_c_version(), helm.helm_sdk_version())  # 0.2.1 v4.2.3
 ```
 
 Registries, repositories, and dependencies:
@@ -192,7 +192,7 @@ Wheels must be built from the source tree, not from the sdist, or the bundled li
 dropped:
 
 ```bash
-python scripts/fetch_native_lib.py --release v0.2.0   # or --from-dir ../helm-c/build
+python scripts/fetch_native_lib.py --release v0.2.1   # or --from-dir ../helm-c/build
 python -m build --wheel                               # NOT `python -m build`
 python scripts/tag_wheel.py dist/*.whl                # refuses a wheel with no library
 ```

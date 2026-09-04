@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 env:
-  HELM_C_REF: v0.2.0
+  HELM_C_REF: v0.2.1
 
 jobs:
   test:

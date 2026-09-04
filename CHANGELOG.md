@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-09-04
+
+First published release.
+
+### Changed
+
+- The bundled native library is helm-c-sdk v0.2.1, an internal quality
+  release of the same 70-symbol ABI (shared shim helpers, harness
+  decomposition; no behavior change).
+- Builtin-shadowing keyword parameters renamed before publication:
+  `list(all_states=, name_filter=)`, `history(max_revisions=)`,
+  `get_values(all_values=)`, `show(output_format=)`.
+
 ## [0.2.0] - 2026-08-20
 
 Upgrades the native layer to helm-c-sdk v0.2.0 (70-symbol ABI; Helm SDK
@@ -74,5 +87,6 @@ v4.2.3) using `ctypes`, with no runtime dependencies.
 - The library is loaded by absolute path, so no `LD_LIBRARY_PATH`,
   `DYLD_LIBRARY_PATH`, or `PATH` configuration is ever required.
 
+[0.2.1]: https://github.com/shivamkumar99/helm-python-sdk/releases/tag/v0.2.1
 [0.2.0]: https://github.com/shivamkumar99/helm-python-sdk/releases/tag/v0.2.0
 [0.1.0]: https://github.com/shivamkumar99/helm-python-sdk/releases/tag/v0.1.0

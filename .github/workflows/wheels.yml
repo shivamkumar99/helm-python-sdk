@@ -11,15 +11,15 @@ on:
   workflow_dispatch:
     inputs:
       helm_c_release:
-        description: "helm-c-sdk release to bundle (e.g. v0.2.0)"
+        description: "helm-c-sdk release to bundle (e.g. v0.2.1)"
         required: true
-        default: v0.2.0
+        default: v0.2.1
 
 permissions:
   contents: read
 
 env:
-  HELM_C_RELEASE: ${{ inputs.helm_c_release || 'v0.2.0' }}
+  HELM_C_RELEASE: ${{ inputs.helm_c_release || 'v0.2.1' }}
 
 jobs:
   wheels:

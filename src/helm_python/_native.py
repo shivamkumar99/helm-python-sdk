@@ -49,7 +49,7 @@ __all__ = [
 # --- versions this binding is built against -------------------------------
 
 #: helm-c-sdk release this binding is pinned to.
-EXPECTED_HELM_C_VERSION: Final = "0.2.0"
+EXPECTED_HELM_C_VERSION: Final = "0.2.1"
 #: Helm Go SDK compiled into that release.
 EXPECTED_HELM_SDK_VERSION: Final = "v4.2.3"
 

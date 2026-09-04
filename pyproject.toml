@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "helm-python-sdk"
-version = "0.2.0"
+version = "0.2.1"
 description = "Helm v4 SDK for Python — charts, OCI registries, and releases, with no helm binary required"
 readme = "README.md"
 license = "Apache-2.0"
