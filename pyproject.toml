@@ -43,12 +43,14 @@ path = "hatch_build.py"
 
 [tool.hatch.build.targets.sdist]
 # The sdist is the build-from-source fallback, so it carries the vendored
-# helm-c-sdk source (populated by scripts/vendor_helm_c.py).
+# helm-c-sdk source (populated by scripts/vendor_helm_c.py). vendor/ is
+# gitignored, and hatchling applies VCS ignores over `include`, so the
+# vendored tree must ride force-include (below) or it silently vanishes
+# from the sdist.
 include = [
   "src/helm_python",
   "tests",
   "scripts",
-  "vendor/helm-c",
   "hatch_build.py",
   "pyproject.toml",
   "README.md",
@@ -56,6 +58,11 @@ include = [
   "LICENSE",
   "NOTICE",
 ]
+
+[tool.hatch.build.targets.sdist.force-include]
+# Bypasses the VCS-ignore filter for the vendored helm-c-sdk source; the
+# vendor script must run before building an sdist.
+"vendor/helm-c" = "vendor/helm-c"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/helm_python"]
