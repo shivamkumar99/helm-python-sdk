@@ -21,6 +21,20 @@ runtime dependencies**.
 > lifecycle, logging, and platform wheels all work. See `PLAN.md` for what remains before a
 > public release.
 
+## Docker
+
+A ready-to-use image with the SDK preinstalled (amd64; arm64 arrives with
+the linux-arm64 wheel):
+
+```bash
+docker build -t helm-python-sdk .
+docker run -it --rm -v ~/.kube/config:/home/helm/.kube/config:ro helm-python-sdk python
+```
+
+Use it as a base for automation jobs: `FROM helm-python-sdk`, copy your
+script, done. The SDK installs from PyPI as a prebuilt wheel — nothing
+compiles in the image.
+
 ## Install
 
 ```bash

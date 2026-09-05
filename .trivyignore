@@ -1,0 +1,9 @@
+# Accepted records in the base image's own pip, kept deliberately so
+# derived images can install their dependencies. These are pip's *vendored
+# internal copies* (pip/_vendor), not packages the image exposes; current
+# pip (26.x) still bundles them, so there is no upgrade to apply. Remove
+# these entries when a pip release rolls the vendored copies forward.
+# msgpack vendored inside pip
+GHSA-6v7p-g79w-8964
+# setuptools record vendored inside pip
+CVE-2025-47273

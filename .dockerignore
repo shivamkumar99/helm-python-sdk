@@ -1,0 +1,15 @@
+.git
+.venv
+.ci-venv
+__pycache__
+*.py[cod]
+dist
+build
+vendor
+coverage.xml
+.pytest_cache
+.mypy_cache
+.ruff_cache
+src/helm_python/lib
+CLAUDE.md
+.claude

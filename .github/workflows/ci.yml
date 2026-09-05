@@ -168,6 +168,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          # gitleaks scans commit history, not just the checkout.
+          fetch-depth: 0
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
@@ -209,6 +212,10 @@ jobs:
           PY
           pip-audit --progress-spinner off -r requirements-dev.txt \
             | tee reports/pip-audit-dev.txt
+      - name: gitleaks (secret detection)
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - name: Upload security report (private repo only)
         if: always() && github.event.repository.private
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
@@ -217,3 +224,21 @@ jobs:
           path: reports/
           retention-days: 30
           if-no-files-found: ignore
+
+  image:
+    # The published-SDK base image, built from PyPI and scanned. Fixable
+    # HIGH/CRITICAL CVEs fail the build; accepted records live in
+    # .trivyignore with their justification.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Build the image
+        run: docker build -t helm-python-sdk:ci .
+      - name: trivy image scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: helm-python-sdk:ci
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+          trivyignores: .trivyignore

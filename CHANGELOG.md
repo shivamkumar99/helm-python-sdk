@@ -16,6 +16,10 @@ First published release.
 - Builtin-shadowing keyword parameters renamed before publication:
   `list(all_states=, name_filter=)`, `history(max_revisions=)`,
   `get_values(all_values=)`, `show(output_format=)`.
+- `NativeHandle.__enter__` preserves subclass types, so `with Config(...)
+  as cfg` type-checks under strict checkers.
+- Release wheels strip debug symbols from the bundled Linux library
+  (the unstripped wheel exceeded PyPI's file-size limit).
 
 ## [0.2.0] - 2026-08-20
 
