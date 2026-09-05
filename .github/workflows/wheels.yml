@@ -53,6 +53,16 @@ jobs:
         run: python scripts/fetch_native_lib.py --release "$HELM_C_RELEASE"
         shell: bash
 
+      - name: Strip debug symbols from the Linux library
+        if: runner.os == 'Linux'
+        # The unstripped cgo .so carries full DWARF and pushes the wheel past
+        # PyPI's 100 MB file limit; symbols are useless inside a wheel. Runs
+        # after checksum verification (fetch_native_lib), which covers the
+        # release asset as published.
+        run: |
+          find src/helm_python/lib -name 'libhelm_c.so.*' -type f -exec strip --strip-unneeded {} +
+          ls -la src/helm_python/lib/
+
       - name: Build the wheel
         run: |
           python -m pip install --upgrade build wheel packaging
@@ -144,3 +154,7 @@ jobs:
           path: dist
           merge-multiple: true
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          # A partially-published release must be resumable: files that
+          # already made it to PyPI are skipped, not fatal.
+          skip-existing: true
