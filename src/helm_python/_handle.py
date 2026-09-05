@@ -20,12 +20,16 @@ from __future__ import annotations
 import contextlib
 import weakref
 from types import TracebackType
-from typing import ClassVar
+from typing import ClassVar, TypeVar
 
 from . import _native
 from .errors import HelmError
 
 __all__ = ["NativeHandle"]
+
+# ``typing.Self`` needs 3.11 and typing_extensions is not a dependency, so a
+# bound TypeVar expresses "returns its own type" for subclasses on 3.10.
+_HandleT = TypeVar("_HandleT", bound="NativeHandle")
 
 
 def _release(free_func: str, handle: int) -> None:
@@ -68,7 +72,7 @@ class NativeHandle:
             raise HelmError(f"this {self._kind} is closed")
         return _native.HANDLE(self._handle)
 
-    def __enter__(self) -> NativeHandle:
+    def __enter__(self: _HandleT) -> _HandleT:
         return self
 
     def __exit__(
