@@ -233,8 +233,11 @@ with helm.Config(namespace="default") as cfg:  # ~/.kube/config chain
       `helm-python` is already taken on PyPI; `helm-python-sdk` is free and
       matches both this repository and its helm-c-sdk sibling. The import
       name stays `helm_python`.
-- [ ] Widen helm-c-sdk's release matrix (linux-arm64, darwin-amd64,
-      musllinux) so fewer users fall back to building from source.
+- [ ] Ship linux-arm64 and darwin-amd64 wheels. helm-c-sdk's release
+      matrix now covers both (proven via a v0.2.2-rc.1 dry run); what
+      remains is cutting the real helm-c release, bumping the version
+      handshake here, and enabling the two parked wheels.yml legs.
+      musllinux stays future work.
 - [x] **DONE:** the `HELM_PYTHON_BUILD=1` build hook (`hatch_build.py`) with a
       prerequisite preflight (Go with the version from go.mod, a C compiler,
       make) that names what is missing; `scripts/vendor_helm_c.py` vendors
