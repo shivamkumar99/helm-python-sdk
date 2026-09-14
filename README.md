@@ -1,5 +1,6 @@
 # helm-python-sdk — Helm v4 SDK for Python
 
+[![PyPI](https://img.shields.io/pypi/v/helm-python-sdk?logo=pypi&logoColor=white)](https://pypi.org/project/helm-python-sdk/)
 [![CI](https://github.com/shivamkumar99/helm-python-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/shivamkumar99/helm-python-sdk/actions/workflows/ci.yml)
 [![Wheels](https://github.com/shivamkumar99/helm-python-sdk/actions/workflows/wheels.yml/badge.svg)](https://github.com/shivamkumar99/helm-python-sdk/actions/workflows/wheels.yml)
 [![License: Apache-2.0](https://img.shields.io/github/license/shivamkumar99/helm-python-sdk)](LICENSE)
@@ -17,11 +18,26 @@ It binds to [`libhelm_c`](https://github.com/shivamkumar99/helm-c-sdk) (a C ABI 
 official Go SDK) using `ctypes` from the standard library, so the package itself has **zero
 runtime dependencies**.
 
-> **Status: early development, feature-complete API.** Charts, distribution, the release
-> lifecycle, logging, and platform wheels all work. See `PLAN.md` for what remains before a
-> public release.
+A Python API for the Kubernetes package manager: everything the Helm CLI does with charts,
+repositories, and releases is callable as a typed Python function, backed by Helm's official
+Go SDK.
 
-## Docker
+> **Status: published.** `pip install helm-python-sdk` — prebuilt wheels for Linux, macOS,
+> and Windows on [PyPI](https://pypi.org/project/helm-python-sdk/), plus a
+> build-from-source sdist.
+
+## Install
+
+```bash
+pip install helm-python-sdk
+```
+
+The import name is `helm_python`.
+
+The wheel bundles the native library for your platform, so nothing is compiled at install
+time and no environment variables need to be set.
+
+### Docker
 
 A ready-to-use image with the SDK preinstalled (amd64; arm64 arrives with
 the linux-arm64 wheel):
@@ -35,18 +51,7 @@ Use it as a base for automation jobs: `FROM helm-python-sdk`, copy your
 script, done. The SDK installs from PyPI as a prebuilt wheel — nothing
 compiles in the image.
 
-## Install
-
-```bash
-pip install helm-python-sdk
-```
-
-The import name is `helm_python`.
-
-The wheel bundles the native library for your platform, so nothing is compiled at install
-time and no environment variables need to be set.
-
-### If no wheel matches your platform
+## If no wheel matches your platform
 
 Three options, resolved in this order:
 
