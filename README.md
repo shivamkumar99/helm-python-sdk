@@ -39,17 +39,24 @@ time and no environment variables need to be set.
 
 ### Docker
 
-A ready-to-use image with the SDK preinstalled (amd64; arm64 arrives with
-the linux-arm64 wheel):
+A ready-to-use image with the SDK preinstalled, amd64 and arm64:
 
 ```bash
 docker build -t helm-python-sdk .
-docker run -it --rm -v ~/.kube/config:/home/helm/.kube/config:ro helm-python-sdk python
+docker run -it --rm -v ~/.kube/config:/home/nonroot/.kube/config:ro helm-python-sdk python
 ```
 
 Use it as a base for automation jobs: `FROM helm-python-sdk`, copy your
 script, done. The SDK installs from PyPI as a prebuilt wheel — nothing
 compiles in the image.
+
+It builds on [Docker Hardened Images](https://docs.docker.com/dhi/)
+(digest-pinned, Debian/glibc): a `-dev` stage resolves the wheel into a
+venv and the hardened runtime variant ships it — non-root, no shell, no
+installers, and no fixable CVEs at any severity. Pulling `dhi.io` needs a
+(free) Docker login. Because the shipped stage has no installer, a
+derived image that needs extra Python packages adds them through a build
+stage of its own — see the recipe at the top of the `Dockerfile`.
 
 ## If no wheel matches your platform
 
