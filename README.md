@@ -58,6 +58,24 @@ installers, and no fixable CVEs at any severity. Pulling `dhi.io` needs a
 derived image that needs extra Python packages adds them through a build
 stage of its own — see the recipe at the top of the `Dockerfile`.
 
+## Platform support
+
+Prebuilt wheels cover Linux (x86_64, arm64), macOS (arm64, x86_64), and
+Windows (x86_64) — all glibc or native platform libcs, and each one is
+load-tested in CI on every commit, not merely compiled.
+
+**musl (Alpine) is not supported.** Go cannot currently produce a
+`c-shared` library that musl's dynamic loader will `dlopen`: the library
+links its thread-local storage in the initial-exec model, which musl
+resolves only for libraries present at program start, so `ctypes` fails
+with `initial-exec TLS resolves to dynamic definition`. This is
+[golang/go#54805](https://github.com/golang/go/issues/54805), open
+upstream and unfixed, and it affects x86_64 as well as arm64. Building
+from source on Alpine hits the same wall, so the package says so plainly
+instead of suggesting it. Use a glibc image (Debian, Ubuntu, Fedora,
+RHEL). A CI canary builds against musl on every run and will flag the day
+the upstream fix lands.
+
 ## If no wheel matches your platform
 
 Three options, resolved in this order:

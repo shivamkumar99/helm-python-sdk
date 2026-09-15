@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import ctypes
 import os
+import platform
 import sys
 from pathlib import Path
 from typing import Any, Final
@@ -226,6 +227,45 @@ def _candidate_paths() -> list[Path]:
     return candidates
 
 
+#: Why musl cannot work, and what to do instead. Building from source does
+#: not help here, so the generic "reinstall with HELM_PYTHON_BUILD=1" advice
+#: would send people down a dead end.
+MUSL_EXPLANATION: Final = (
+    "Go cannot yet produce a c-shared library that musl's dynamic loader can "
+    "dlopen (golang/go#54805 — the library links its thread-local storage in "
+    "the initial-exec model, which musl only resolves for libraries loaded at "
+    "program start). Compiling from source hits the same wall. Run this "
+    "package on a glibc distribution instead: Debian, Ubuntu, Fedora, RHEL, "
+    "or their container images."
+)
+
+#: The loader error musl raises for exactly that mismatch.
+_MUSL_TLS_MARKER: Final = "initial-exec TLS"
+
+
+def on_musl() -> bool:
+    """Whether this interpreter runs against musl libc (Alpine and kin)."""
+    if sys.platform != "linux":
+        return False
+    # glibc names itself; musl reports nothing and ships a distinct loader.
+    if platform.libc_ver()[0]:
+        return False
+    return any(Path("/lib").glob("ld-musl-*.so.1"))
+
+
+def _load_failure(path: Path, exc: OSError) -> str:
+    """Explain a load failure, naming musl when that is what happened."""
+    preamble = f"found the helm-c library at {path} but could not load it: {exc}. "
+    if _MUSL_TLS_MARKER in str(exc) or on_musl():
+        return preamble + MUSL_EXPLANATION
+    return preamble + (
+        "This usually means the binary was built for a different "
+        "architecture or libc. Set HELM_C_LIB to a library built for "
+        "this system, or reinstall with HELM_PYTHON_BUILD=1 to build "
+        "from source."
+    )
+
+
 def _load() -> tuple[ctypes.CDLL, Path]:
     tried = _candidate_paths()
     for path in tried:
@@ -233,15 +273,15 @@ def _load() -> tuple[ctypes.CDLL, Path]:
             try:
                 return ctypes.CDLL(str(path)), path
             except OSError as exc:  # wrong arch, missing system deps, ...
-                raise HelmLibraryError(
-                    f"found the helm-c library at {path} but could not load it: {exc}. "
-                    "This usually means the binary was built for a different "
-                    "architecture or libc. Set HELM_C_LIB to a library built for "
-                    "this system, or reinstall with HELM_PYTHON_BUILD=1 to build "
-                    "from source."
-                ) from exc
+                raise HelmLibraryError(_load_failure(path, exc)) from exc
 
     searched = "\n  ".join(str(p) for p in tried)
+    if on_musl():
+        raise HelmLibraryError(
+            "could not find the helm-c native library, and this system uses "
+            f"musl libc, which is not supported. Searched:\n  {searched}\n"
+            f"{MUSL_EXPLANATION}"
+        )
     raise HelmLibraryError(
         "could not find the helm-c native library. Searched:\n  "
         f"{searched}\n"

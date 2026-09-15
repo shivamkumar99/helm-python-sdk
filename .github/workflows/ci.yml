@@ -114,6 +114,32 @@ jobs:
           HELM_C_LIB: helm-c/build
         run: pytest -m cluster -v
 
+  musl-canary:
+    # musl (Alpine) cannot load a Go c-shared library: golang/go#54805 is
+    # open, so the library links initial-exec TLS that musl's loader will
+    # not resolve for a dlopen. This job builds the whole stack against
+    # musl anyway and asserts the *diagnosis* — a user on Alpine must get
+    # our explanation, never a crash or a dead end. It also watches for the
+    # upstream fix: if the import starts working, the log says so and
+    # musllinux wheels become worth shipping.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check out helm-c-sdk at the pinned release
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: shivamkumar99/helm-c-sdk
+          ref: ${{ env.HELM_C_REF }}
+          path: helm-c
+      - name: What a musl user sees
+        # Informational: the diagnosis itself is asserted by unit tests that
+        # run on every platform. This job's unique job is watching upstream,
+        # so a probe hiccup must not redden the build.
+        continue-on-error: true
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work python:3.13-alpine \
+            sh scripts/musl_probe.sh
+
   dast:
     # Dynamic security checks: drive the built wheel with hostile charts,
     # archives, values, and endpoints and require typed failures, no leaks,
