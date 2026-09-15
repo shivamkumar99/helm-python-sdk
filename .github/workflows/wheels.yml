@@ -11,15 +11,15 @@ on:
   workflow_dispatch:
     inputs:
       helm_c_release:
-        description: "helm-c-sdk release to bundle (e.g. v0.2.1)"
+        description: "helm-c-sdk release to bundle (e.g. v0.2.2)"
         required: true
-        default: v0.2.1
+        default: v0.2.2
 
 permissions:
   contents: read
 
 env:
-  HELM_C_RELEASE: ${{ inputs.helm_c_release || 'v0.2.1' }}
+  HELM_C_RELEASE: ${{ inputs.helm_c_release || 'v0.2.2' }}
 
 jobs:
   wheels:
@@ -29,13 +29,12 @@ jobs:
         include:
           - os: ubuntu-latest
             platform_tag: manylinux_2_28_x86_64
+          - os: ubuntu-24.04-arm
+            platform_tag: manylinux_2_28_aarch64
           - os: macos-latest
             platform_tag: macosx_11_0_arm64
-          # macos-13 (darwin-amd64) is parked until helm-c-sdk releases a
-          # darwin-amd64 asset — fetch_native_lib.py would fail today.
-          # Re-enable together with widening the helm-c release matrix.
-          # - os: macos-13
-          #   platform_tag: macosx_10_15_x86_64
+          - os: macos-15-intel
+            platform_tag: macosx_15_0_x86_64
           - os: windows-latest
             platform_tag: win_amd64
     runs-on: ${{ matrix.os }}

@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-09-15
+
+### Added
+
+- linux-arm64 and darwin-amd64 wheels: the bundled native library is
+  helm-c-sdk v0.2.2, cut from its widened five-platform release matrix
+  (same 70-symbol ABI, no behavior change).
+- A Docker image with the SDK preinstalled from PyPI, plus secret
+  scanning (gitleaks) and dependabot coverage in CI.
+
 ## [0.2.1] - 2026-09-04
 
 First published release.
