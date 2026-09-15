@@ -29,6 +29,13 @@ ENV PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONUNBUFFERED=1
 
+# The digest-pinned base can lag Debian security uploads (the trivy gate
+# fails on fixable CVEs the instant fixes ship); pull the patched packages
+# until the upstream image rebuilds.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN pip install "helm-python-sdk==${HELM_PYTHON_VERSION}" \
     && python -c "import helm_python as h; assert h.__version__ == '${HELM_PYTHON_VERSION}'"
 
