@@ -16,7 +16,7 @@
 # anywhere but PyPI. pip stays available so derived images can add their
 # own dependencies.
 
-ARG HELM_PYTHON_VERSION=0.2.1
+ARG HELM_PYTHON_VERSION=0.2.2
 
 FROM python:3.13-slim@sha256:9d2e5553305c7c7b0097999bb17187c69b921ccd6bc9d40e4bb5ebe652c00285
 ARG HELM_PYTHON_VERSION
