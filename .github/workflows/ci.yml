@@ -228,10 +228,22 @@ jobs:
   image:
     # The published-SDK base image, built from PyPI and scanned. Fixable
     # HIGH/CRITICAL CVEs fail the build; accepted records live in
-    # .trivyignore with their justification.
+    # .trivyignore with their justification. Dependabot PRs get no
+    # repository secrets, so the dhi.io login cannot work there; the gate
+    # still runs on every push to main.
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Log in to dhi.io (Docker Hardened Images)
+        # The hardened base images require an authenticated pull; a free
+        # Docker account works. Secrets: DOCKERHUB_USERNAME + DOCKERHUB_TOKEN
+        # (a read-only access token).
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: dhi.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build the image
         run: docker build -t helm-python-sdk:ci .
       - name: trivy image scan
