@@ -49,9 +49,7 @@ def test_missing_library_on_musl_explains_rather_than_suggesting_a_build(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(_native, "on_musl", lambda: True)
-    monkeypatch.setattr(
-        _native, "_candidate_paths", lambda: [Path("/nonexistent/libhelm_c.so")]
-    )
+    monkeypatch.setattr(_native, "_candidate_paths", lambda: [Path("/nonexistent/libhelm_c.so")])
     with pytest.raises(HelmLibraryError) as caught:
         _native._load()
     message = str(caught.value)
